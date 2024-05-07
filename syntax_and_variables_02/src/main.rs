@@ -16,6 +16,7 @@ fn help() {
              \t- no-spaces \n\
              \t- slugify \n\
              ------------------------------");
+    std::process::exit(0); // exit code
 }
 
 fn main() {
@@ -25,7 +26,6 @@ fn main() {
     // Check how many args we have
     if args.len() < 2 || args.is_empty() { 
         help();
-        return; // exit code
     }
 
     // Variables to receive input and transform according to the args
