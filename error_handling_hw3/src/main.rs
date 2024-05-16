@@ -1,33 +1,16 @@
 use std::env;
-use std::io;
-use std::error::Error;
 mod modules;
+use crate::modules::functions::*;
 
 fn main() {
     // Collect arguments
     let args: Vec<String> = env::args().collect();
-   
-    // Check how many args we have
-    if args.len() < 2 || args.is_empty() { 
-        modules::functions::help();
-    }
 
     // Variables to receive input and transform according to the args
-    let transformation: &str = &args[1].to_lowercase();
-    let mut user_string = String::new();
-    let mut string_mutation = String::new();
-
-    println!("Text to transform:");
-    
-    read_input(&mut user_string);
-    
-    transform(&user_string);
+    let transformation: Command = parse_args(args);
+    let mut user_string = read_input();
+    let mut string_mutation = transform(transformation, &user_string);
 
     // Output transformation
-    println!("--------------------------- \n\
-              Original text: {} \n\
-              Transformed text: {} \n\
-              ---------------------------", 
-              user_string, string_mutation
-    );
+    output_transformation(user_string, string_mutation);
 }

@@ -1,5 +1,7 @@
+use std::io;
 use slug::slugify;
 use std::error::Error;
+use std::fmt::Formatter;
 
 pub enum Command {
     Lowercase,
@@ -30,7 +32,11 @@ impl std::str::FromStr for Command {
     }
 }
 
-// Box of information containing variables
+/* 
+ * Box of information containing variables,
+ * and Debug is necessary implementation for type Error
+ */
+#[derive(Debug)]
 pub struct CommandParseError {
     // variable of type string
     invalid_command: String,
@@ -40,6 +46,7 @@ impl Error for CommandParseError {}
 
 /*
  * https://doc.rust-lang.org/std/fmt/trait.Display.html
+ * Display needed for type Errors
  */
 impl std::fmt::Display for CommandParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -48,7 +55,7 @@ impl std::fmt::Display for CommandParseError {
 }
 
 /*
-* SUPPORT FUNCTIONS
+*                    SUPPORT FUNCTIONS
 */
 fn help() {
    eprintln!("------------------------------ \n\
@@ -59,60 +66,84 @@ fn help() {
             \t- uppercase \n\
             \t- no-spaces \n\
             \t- slugify \n\
+            \t- csv \n\
             ------------------------------");
+    std::process::exit(0); // exit code
 }
 
-fn read_input(mut user_string) -> Result<String, Box<dyn Error>> {
-  let input_from_user = io::stdin().read_line(&mut user_string)?
-  return Ok(input_from_user);
+pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
+    // Check how many args we have
+    if args.len() < 2 || args.is_empty() {
+        help();
+    }
+
+    let transformation = args[1].parse::<Command>()?;
+    return Ok(transformation)
 }
 
-fn tranform(String) -> Result<String, Box<dyn Error>> {
-     match transformation {
-         "lowercase" => toLowercase(&user_string),
-         "uppercase" => toUppercase(&user_string),
-         "no-spaces" => removeSpaces(&user_string),
-         "slugify" => toSlugify(&user_string),
-          _=> help(), // Display help if transformation doesn't exist
-      };
+pub fn read_input() -> Result<String, Box<dyn Error>> {
+  let mut user_string = String::new();
+
+  println!("Text to transform:");
+  let input_from_user = io::stdin().read_line(&mut user_string)?;
+  
+  return Ok(input_from_user.to_string());
 }
 
-fn validInput(valid_string: &str) -> bool {
+pub fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
+    todo!();
+}
+
+fn validate_input(valid_string: &str) -> bool {
     !valid_string.trim().is_empty()
 }
 
-fn toLowercase(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validInput(user_string)
+fn to_lowercase(user_string: &str) -> Result<String, Box<dyn Error>> {
+    if validate_input(user_string)
     {
         Ok(user_string.to_lowercase())
     } else {
-        Err("Input was an empty string.")
+        Err("Input was an empty string.".into())
     }
 }
 
-fn toUppercase(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validInput(user_string)
+fn to_uppercase(user_string: &str) -> Result<String, Box<dyn Error>> {
+    if validate_input(user_string)
     {
         Ok(user_string.to_uppercase())
     } else {
-        Err("Input was an empty string.")
+        Err("Input was an empty string.".into())
     }
 }
 
-fn removeSpaces(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validInput(user_string)
+fn remove_spaces(user_string: &str) -> Result<String, Box<dyn Error>> {
+    if validate_input(user_string)
     {
         Ok(user_string.replace(" ", ""))
     } else {
-        Err("Input was an empty string.")
+        Err("Input was an empty string.".into())
     }
 }
 
-fn toSlugify(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validInput(user_string)
+fn to_slugify(user_string: &str) -> Result<String, Box<dyn Error>> {
+    if validate_input(user_string)
     {
         Ok(slugify(user_string.clone()))
     } else {
-        Err("Input was an empty string.")
+        Err("Input was an empty string.".into())
     }
+}
+
+fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
+    todo!();
+}
+
+pub fn output_transformation(user_string: &str, string_mutation: &str) {
+    // Output transformation
+     println!("--------------------------- \n\
+               Original text: {} \n\
+               Transformed text: {} \n\
+               ---------------------------",
+               user_string, string_mutation
+     );
 }
