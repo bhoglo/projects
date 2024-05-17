@@ -68,7 +68,7 @@ fn help() {
             \t- slugify \n\
             \t- csv \n\
             ------------------------------");
-    std::process::exit(0); // exit code
+    std::process::exit(1);
 }
 
 pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
@@ -151,10 +151,12 @@ fn print_csv(_user_string: &str) -> Result<String, Box<dyn Error>> {
 
 pub fn output_transformation(user_string: String, string_mutation: String) {
     // Output transformation
-     println!("--------------------------- \n\
+     let output: String = format!("--------------------------- \n\
                Original text: {} \n\
                Transformed text: {} \n\
                ---------------------------",
                user_string, string_mutation
      );
+
+     println!("{}", output);
 }
