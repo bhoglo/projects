@@ -12,5 +12,5 @@ fn main() {
     let string_mutation: String = transform(transformation, &user_string).expect("Failed to transform user string.");
 
     // Output transformation
-    output_transformation(user_string.as_str(), string_mutation.as_str());
+    output_transformation(user_string, string_mutation);
 }

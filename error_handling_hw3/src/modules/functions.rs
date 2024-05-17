@@ -85,9 +85,11 @@ pub fn read_input() -> Result<String, Box<dyn Error>> {
   let mut user_string = String::new();
 
   println!("Text to transform:");
-  let input_from_user = io::stdin().read_line(&mut user_string)?;
-  
-  return Ok(input_from_user.to_string());
+  io::stdin().read_line(&mut user_string)?;
+
+  let user_input: String = String::from(user_string);
+
+  return Ok(user_input);
 }
 
 pub fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
@@ -147,7 +149,7 @@ fn print_csv(_user_string: &str) -> Result<String, Box<dyn Error>> {
     todo!();
 }
 
-pub fn output_transformation(user_string: &str, string_mutation: &str) {
+pub fn output_transformation(user_string: String, string_mutation: String) {
     // Output transformation
      println!("--------------------------- \n\
                Original text: {} \n\
