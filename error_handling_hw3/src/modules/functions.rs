@@ -91,7 +91,15 @@ pub fn read_input() -> Result<String, Box<dyn Error>> {
 }
 
 pub fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
-    todo!();
+    let result = match transformation {
+        Command::Lowercase => to_lowercase(user_string),
+        Command::Uppercase => to_uppercase(user_string),
+        Command::NoSpaces => remove_spaces(user_string),
+        Command::Slugify => to_slugify(user_string),
+        Command::Csv => print_csv(user_string),
+    };
+    
+    return Ok(result?)
 }
 
 fn validate_input(valid_string: &str) -> bool {
@@ -128,13 +136,14 @@ fn remove_spaces(user_string: &str) -> Result<String, Box<dyn Error>> {
 fn to_slugify(user_string: &str) -> Result<String, Box<dyn Error>> {
     if validate_input(user_string)
     {
-        Ok(slugify(user_string.clone()))
+        Ok(slugify(user_string))
     } else {
         Err("Input was an empty string.".into())
     }
 }
 
-fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
+// TODO: Remove underscore infront of user_string when implementing.
+fn print_csv(_user_string: &str) -> Result<String, Box<dyn Error>> {
     todo!();
 }
 
