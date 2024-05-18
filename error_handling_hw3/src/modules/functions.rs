@@ -1,4 +1,4 @@
-use std::{io, io::Cursor, error::Error, fmt::Formatter};
+use std::{io, io::Read, io::Cursor, error::Error, fmt::Formatter};
 use slug::slugify;
 use csv::{ReaderBuilder, WriterBuilder};
 
@@ -84,7 +84,7 @@ pub fn read_input() -> Result<String, Box<dyn Error>> {
   let mut user_string = String::new();
 
   println!("Text to transform:");
-  io::stdin().read_line(&mut user_string)?;
+  io::stdin().read_to_string(&mut user_string)?;
 
   let user_input: String = String::from(user_string);
 
@@ -144,6 +144,11 @@ fn to_slugify(user_string: &str) -> Result<String, Box<dyn Error>> {
 }
 
 fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
+    if !validate_input(user_string)
+    {
+        return Err("Input was an empty string.".into());
+    }
+
     let mut csv_buffer = Cursor::new(user_string);
     let mut reader = ReaderBuilder::new()
         .has_headers(true)
@@ -153,6 +158,7 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
     {
         let mut writer = WriterBuilder::new()
             .has_headers(true)
+            .delimiter(b'\t')
             .from_writer(&mut string_buffer);
         for result in reader.records() {
             match result {
@@ -175,8 +181,8 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
 pub fn output_transformation(user_string: String, string_mutation: String) {
     // Output transformation
      let output: String = format!("--------------------------- \n\
-               Original text: {} \n\
-               Transformed text: {} \n\
+               Original text: \n {} \
+               Transformed text: \n {} \
                ---------------------------",
                user_string, string_mutation
      );
