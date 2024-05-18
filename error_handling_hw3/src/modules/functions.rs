@@ -151,13 +151,13 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
 
     let mut csv_buffer = Cursor::new(user_string);
     let mut reader = ReaderBuilder::new()
-        .has_headers(true)
+        .has_headers(false)
         .from_reader(&mut csv_buffer);
 
     let mut string_buffer = Vec::new();
     {
         let mut writer = WriterBuilder::new()
-            .has_headers(true)
+            .has_headers(false)
             .delimiter(b'\t')
             .from_writer(&mut string_buffer);
         for result in reader.records() {
