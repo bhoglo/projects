@@ -150,21 +150,22 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
         .from_reader(&mut csv_buffer);
 
     let mut string_buffer = Vec::new();
-    let mut writer = WriterBuilder::new()
-        .has_headers(true)
-        .from_writer(&mut string_buffer);
-
-    for result in reader.records() {
-        match result {
-            Ok(record) => writer.write_record(&record)?,
-            Err(error) => {
-                eprintln!("Error reading CSV from <stdin>: {}", error);
-                std::process::exit(1);
+    {
+        let mut writer = WriterBuilder::new()
+            .has_headers(true)
+            .from_writer(&mut string_buffer);
+        for result in reader.records() {
+            match result {
+                Ok(record) => writer.write_record(&record)?,
+                Err(error) => {
+                    eprintln!("Error reading CSV from <stdin>: {}", error);
+                    std::process::exit(1);
+                }
             }
         }
-    }
 
-    writer.flush()?;
+        writer.flush()?;
+    }
 
     let output = format!("{}", String::from_utf8(string_buffer).unwrap());
 
