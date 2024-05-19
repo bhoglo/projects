@@ -2,6 +2,7 @@ use std::{io, io::Read, io::Cursor, error::Error, fmt::Formatter};
 use slug::slugify;
 use csv::{ReaderBuilder, WriterBuilder};
 
+#[derive(Copy, Clone)]
 pub enum Command {
     Lowercase,
     Uppercase,
@@ -80,11 +81,14 @@ pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     return Ok(transformation)
 }
 
-pub fn read_input() -> Result<String, Box<dyn Error>> {
+pub fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
   let mut user_string = String::new();
 
   println!("Text to transform:");
-  io::stdin().read_to_string(&mut user_string)?;
+  match transformation {
+      Command::Csv => io::stdin().read_to_string(&mut user_string)?,
+      _ => io::stdin().read_line(&mut user_string)?
+  };
 
   let user_input: String = String::from(user_string);
 

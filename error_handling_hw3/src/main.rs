@@ -8,7 +8,7 @@ fn main() {
 
     // Variables to receive input and transform according to the args
     let transformation: Command = parse_args(args).expect("Failed to parse arguements.");
-    let user_string: String = read_input().expect("Failed to read command line input.");
+    let user_string: String = read_input(transformation.clone()).expect("Failed to read command line input.");
     let string_mutation: String = transform(transformation, &user_string).expect("Failed to transform user string.");
 
     // Output transformation
