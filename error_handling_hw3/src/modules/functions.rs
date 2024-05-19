@@ -57,7 +57,7 @@ impl std::fmt::Display for CommandParseError {
 /*
 *                    SUPPORT FUNCTIONS
 */
-fn help() -> String {
+pub fn help() {
    eprintln!("------------------------------ \n\
             Usage: ./error_handling_hw3 <transformation> \n\
             ------------------------------ \n\
@@ -68,13 +68,14 @@ fn help() -> String {
             \t- slugify \n\
             \t- csv \n\
             ------------------------------");
-   std::process::exit(1);
 }
 
 pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     // Check how many args we have
     if args.len() != 2 || args.is_empty() {
+        eprintln!("Expected one arguement: {:?}", args);
         help();
+        std::process::exit(1);
     }
 
     let transformation = args[1].parse::<Command>()?;
