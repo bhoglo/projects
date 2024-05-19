@@ -73,7 +73,7 @@ fn help() -> String {
 
 pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     // Check how many args we have
-    if args.len() < 2 || args.is_empty() {
+    if args.len() != 2 || args.is_empty() {
         help();
     }
 
