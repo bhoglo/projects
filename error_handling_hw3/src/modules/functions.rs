@@ -3,7 +3,7 @@ use slug::slugify;
 use csv::{ReaderBuilder, WriterBuilder};
 
 #[derive(Copy, Clone)]
-pub enum Command {
+enum Command {
     Lowercase,
     Uppercase,
     NoSpaces,
@@ -37,7 +37,7 @@ impl std::str::FromStr for Command {
  * and Debug is necessary implementation for type Error
  */
 #[derive(Debug)]
-pub struct CommandParseError {
+struct CommandParseError {
     // variable of type string
     invalid_command: String,
 }
@@ -57,7 +57,7 @@ impl std::fmt::Display for CommandParseError {
 /*
 *                    SUPPORT FUNCTIONS
 */
-pub fn help() {
+fn help() {
    eprintln!("------------------------------ \n\
             Usage: ./error_handling_hw3 <transformation> \n\
             ------------------------------ \n\
@@ -70,7 +70,7 @@ pub fn help() {
             ------------------------------");
 }
 
-pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
+fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     // Check how many args we have
     if args.len() != 2 || args.is_empty() {
         eprintln!("Expected one arguement: {:?}", args);
@@ -82,7 +82,7 @@ pub fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     return Ok(transformation)
 }
 
-pub fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
+fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
   let mut user_string = String::new();
 
   println!("Text to transform:");
@@ -96,7 +96,31 @@ pub fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
   return Ok(user_input);
 }
 
-pub fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
+pub fn run(args: Vec<String>) -> Result<String, Box<dyn Error>> {
+    // Variables to receive input and transform according to the args
+    let transformation: Command = parse_args(args).unwrap_or_else(|error| {
+        eprintln!("Unable to parse arguments: {}", error);
+        help();
+        std::process::exit(1);
+    });
+ 
+    let user_string: String = read_input(transformation.clone()).unwrap_or_else(|error| {
+        eprintln!("Failed to read stdin: {}", error);
+        std::process::exit(1);
+    });
+ 
+    let string_mutation: String = transform(transformation, &user_string).unwrap_or_else(|error| {
+        eprintln!("Failed to transform input: {}", error);
+        std::process::exit(1);
+    });
+
+    // Output transformation
+    output_transformation(user_string, string_mutation);
+
+    return Ok("Success".to_string())
+}
+
+fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
     let result = match transformation {
         Command::Lowercase => to_lowercase(user_string),
         Command::Uppercase => to_uppercase(user_string),
@@ -183,7 +207,7 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
     Ok(output)
 }
 
-pub fn output_transformation(user_string: String, string_mutation: String) {
+fn output_transformation(user_string: String, string_mutation: String) {
     // Output transformation
      let output: String = format!("--------------------------- \n\
                Original text: \n {} \
