@@ -7,7 +7,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     match run(args) {
-        Ok(transmutation) => println!("Program status: {}", transmutation),
+        Ok(status) => println!("Program status: {}", status),
         Err(error) => {
             eprintln!("Error running program: {}", error);
             std::process::exit(1);
