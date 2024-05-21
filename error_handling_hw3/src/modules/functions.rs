@@ -59,7 +59,7 @@ impl std::fmt::Display for CommandParseError {
 */
 fn help() {
    eprintln!("------------------------------ \n\
-            Usage: ./error_handling_hw3 <transformation> \n\
+            Usage: ./concurrency_and_multithreading_hw4 <transformation> \n\
             ------------------------------ \n\
             Transformation options: \n\
             \t- lowercase \n\
@@ -98,21 +98,11 @@ fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
 
 pub fn run(args: Vec<String>) -> Result<String, Box<dyn Error>> {
     // Variables to receive input and transform according to the args
-    let transformation: Command = parse_args(args).unwrap_or_else(|error| {
-        eprintln!("Unable to parse arguments: {}", error);
-        help();
-        std::process::exit(1);
-    });
+    let transformation = parse_args(args)?;
  
-    let user_string: String = read_input(transformation.clone()).unwrap_or_else(|error| {
-        eprintln!("Failed to read stdin: {}", error);
-        std::process::exit(1);
-    });
+    let user_string = read_input(transformation.clone())?;
  
-    let string_mutation: String = transform(transformation, &user_string).unwrap_or_else(|error| {
-        eprintln!("Failed to transform input: {}", error);
-        std::process::exit(1);
-    });
+    let string_mutation = transform(transformation, &user_string)?;
 
     // Output transformation
     output_transformation(user_string, string_mutation);

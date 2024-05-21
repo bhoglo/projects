@@ -1,6 +1,6 @@
 use std::env;
 mod modules;
-use crate::modules::functions::*;
+use crate::modules::functions::run;
 
 fn main() {
     // Collect arguments
