@@ -6,8 +6,11 @@ fn main() {
     // Collect arguments
     let args: Vec<String> = env::args().collect();
 
-    run(args).unwrap_or_else(|error| {
-        eprintln!("Error running program: {}", error);
-        std::process::exit(1);
-    });
+    match run(args) {
+        Ok(transmutation) => println!("Program status: {}", transmutation),
+        Err(error) => {
+            eprintln!("Error running program: {}", error);
+            std::process::exit(1);
+        }
+    }
 }
