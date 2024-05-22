@@ -1,4 +1,4 @@
-use std::{io, io::Read, io::Cursor, error::Error, fmt::Formatter};
+use std::{io, io::Read, io::Cursor, error::Error, fmt::Formatter, sync::mpsc, thread};
 use slug::slugify;
 use csv::{ReaderBuilder, WriterBuilder};
 
@@ -78,40 +78,58 @@ fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
         std::process::exit(1);
     }
 
-    let transformation = args[1].parse::<Command>()?;
-    return Ok(transformation)
+    let command = args[1].parse::<Command>()?;
+    return Ok(command)
 }
 
-fn read_input(transformation: Command) -> Result<String, Box<dyn Error>> {
-  let mut user_string = String::new();
+fn read_input(command: Command, tx: mpsc::Sender<(Command, String)>) -> Result<String, Box<dyn Error>> {
+    let mut user_string = String::new();
 
-  println!("Text to transform:");
-  match transformation {
-      Command::Csv => io::stdin().read_to_string(&mut user_string)?,
-      _ => io::stdin().read_line(&mut user_string)?
-  };
+    println!("Text to transform:");
+    match command {
+        Command::Csv => io::stdin().read_to_string(&mut user_string)?,
+        _ => io::stdin().read_line(&mut user_string)?
+    };
 
-  let user_input: String = String::from(user_string);
+    let user_input: String = String::from(user_string);
+    let _ = tx.send((command, user_input.clone()));
 
-  return Ok(user_input);
+    return Ok(user_input);
 }
 
 pub fn run(args: Vec<String>) -> Result<String, Box<dyn Error>> {
-    // Variables to receive input and transform according to the args
-    let transformation = parse_args(args)?;
- 
-    let user_string = read_input(transformation.clone())?;
- 
-    let string_mutation = transform(transformation, &user_string)?;
+    let command = parse_args(args)?;
 
-    // Output transformation
-    output_transformation(user_string, string_mutation);
+    let (tx, rx): (mpsc::Sender<(Command, String)>, mpsc::Receiver<(Command, String)>) = mpsc::channel();
+
+    let input = thread::spawn(move || {
+        if let Err(error) = read_input(command, tx) {
+            eprintln!("Error reading input: {}", error);
+        }
+    });
+
+    let output = thread::spawn(move || {
+        for request in rx {
+            match transform(request) {
+                Ok(string_mutation) => output_transformation(string_mutation),
+                Err(error) => {
+                    eprintln!("Error writing output: {}", error)
+                }
+            };
+        }
+    });
+
+    let _ = input.join();
+    let _ = output.join();
 
     return Ok("Success".to_string())
 }
 
-fn transform(transformation: Command, user_string: &str) -> Result<String, Box<dyn Error>> {
-    let result = match transformation {
+fn transform(output: (Command, String)) -> Result<String, Box<dyn Error>> {
+    let command = output.0;
+    let user_string = output.1;
+
+    let result = match command {
         Command::Lowercase => to_lowercase(user_string),
         Command::Uppercase => to_uppercase(user_string),
         Command::NoSpaces => remove_spaces(user_string),
@@ -126,8 +144,8 @@ fn validate_input(valid_string: &str) -> bool {
     !valid_string.trim().is_empty()
 }
 
-fn to_lowercase(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validate_input(user_string)
+fn to_lowercase(user_string: String) -> Result<String, Box<dyn Error>> {
+    if validate_input(&user_string)
     {
         Ok(user_string.to_lowercase())
     } else {
@@ -135,8 +153,8 @@ fn to_lowercase(user_string: &str) -> Result<String, Box<dyn Error>> {
     }
 }
 
-fn to_uppercase(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validate_input(user_string)
+fn to_uppercase(user_string: String) -> Result<String, Box<dyn Error>> {
+    if validate_input(&user_string)
     {
         Ok(user_string.to_uppercase())
     } else {
@@ -144,8 +162,8 @@ fn to_uppercase(user_string: &str) -> Result<String, Box<dyn Error>> {
     }
 }
 
-fn remove_spaces(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validate_input(user_string)
+fn remove_spaces(user_string: String) -> Result<String, Box<dyn Error>> {
+    if validate_input(&user_string)
     {
         Ok(user_string.replace(" ", ""))
     } else {
@@ -153,22 +171,22 @@ fn remove_spaces(user_string: &str) -> Result<String, Box<dyn Error>> {
     }
 }
 
-fn to_slugify(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if validate_input(user_string)
+fn to_slugify(user_string: String) -> Result<String, Box<dyn Error>> {
+    if validate_input(&user_string)
     {
-        Ok(slugify(user_string))
+        Ok(slugify(&user_string))
     } else {
         Err("Input was an empty string.".into())
     }
 }
 
-fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
-    if !validate_input(user_string)
+fn print_csv(user_string: String) -> Result<String, Box<dyn Error>> {
+    if !validate_input(&user_string)
     {
         return Err("Input was an empty string.".into());
     }
 
-    let mut csv_buffer = Cursor::new(user_string);
+    let mut csv_buffer = Cursor::new(&user_string);
     let mut reader = ReaderBuilder::new()
         .has_headers(false)
         .from_reader(&mut csv_buffer);
@@ -197,13 +215,12 @@ fn print_csv(user_string: &str) -> Result<String, Box<dyn Error>> {
     Ok(output)
 }
 
-fn output_transformation(user_string: String, string_mutation: String) {
+fn output_transformation(string_mutation: String) {
     // Output transformation
      let output: String = format!("--------------------------- \n\
-               Original text: \n {} \
                Transformed text: \n {} \
                ---------------------------",
-               user_string, string_mutation
+               string_mutation
      );
 
      println!("{}", output);
