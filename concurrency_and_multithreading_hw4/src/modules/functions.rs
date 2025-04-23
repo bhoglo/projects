@@ -1,6 +1,6 @@
-use std::{io, io::Read, io::Cursor, error::Error, fmt::Formatter, sync::mpsc, thread};
+use std::{io, io::Read, error::Error, fmt::Formatter, sync::mpsc, thread};
 use slug::slugify;
-use csv::{ReaderBuilder, WriterBuilder};
+use prettytable::{Slice, Table};
 
 #[derive(Copy, Clone)]
 enum Command {
@@ -9,6 +9,7 @@ enum Command {
     NoSpaces,
     Slugify,
     Csv,
+    Exit,
 }
 
 /*
@@ -24,6 +25,7 @@ impl std::str::FromStr for Command {
             "no-spaces" => Ok(Command::NoSpaces),
             "slugify" => Ok(Command::Slugify),
             "csv" => Ok(Command::Csv),
+            "exit" => Ok(Command::Exit),
             _ => Err(CommandParseError {
                 // Building out the new error of type CommandParseError
                 invalid_command: command_input.to_string(),
@@ -59,33 +61,68 @@ impl std::fmt::Display for CommandParseError {
 */
 fn help() {
    eprintln!("------------------------------ \n\
-            Usage: ./concurrency_and_multithreading_hw4 <transformation> \n\
-            ------------------------------ \n\
             Transformation options: \n\
             \t- lowercase \n\
             \t- uppercase \n\
             \t- no-spaces \n\
             \t- slugify \n\
             \t- csv \n\
+            \t- exit \n\
             ------------------------------");
 }
 
-fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
-    // Check how many args we have
-    if args.len() != 2 || args.is_empty() {
-        eprintln!("Expected one arguement: {:?}", args);
-        help();
-        std::process::exit(1);
-    }
+fn exit() -> ! {
+   eprintln!("Exiting...");
+   std::process::exit(0);
+}
 
+fn parse_args(args: Vec<String>) -> Result<Command, Box<dyn Error>> {
     let command = args[1].parse::<Command>()?;
     return Ok(command)
 }
 
-fn read_input(command: Command, tx: mpsc::Sender<(Command, String)>) -> Result<String, Box<dyn Error>> {
-    let mut user_string = String::new();
+fn read_channel_input(tx: mpsc::Sender<(Command, String)>) -> Result<String, Box<dyn Error>> {
+    // Interactive input reading
+    // TODO: LOOP
+    println!("No input supplied, entering interactive mode.");
+    help();
+    println!("Please enter a command:");
+
+    let mut user_string: String = String::new();
+    loop {
+        // Temporary line: remove later
+        let command: Command = io::stdin().read_line(&mut user_string)?;
+
+        match command {
+            Command::Csv => io::stdin().read_to_string(&mut user_string)?,
+            Command::Lowercase => user_string = user_string.to_lowercase(),
+            Command::Uppercase => user_string = user_string.to_uppercase(),
+            Command::NoSpaces => user_string = user_string.replace(" ", ""),
+            Command::Slugify => {
+                let slugified = slugify(&user_string);
+                user_string = slugified;
+            },
+            Command::Exit => break,
+            _ => io::stdin().read_line(&mut user_string)?
+        };
+
+        let user_input: String = String::from(user_string);
+        let _ = tx.send((command, user_input.clone()));
+    }
+    return Ok(user_input)
+}
+
+fn read_cli(command: Command, user_input: String, tx: mpsc::Sender<(Command, String)>) -> Result<String, Box<dyn Error>> {
+    let mut user_string = user_input.clone();
 
     println!("Text to transform:");
+    if !user_string.is_empty() {
+        println!("{}", user_string);
+        let _ = tx.send((command, user_input.clone()));
+
+        return Ok(user_input);
+    }
+
     match command {
         Command::Csv => io::stdin().read_to_string(&mut user_string)?,
         _ => io::stdin().read_line(&mut user_string)?
@@ -97,17 +134,10 @@ fn read_input(command: Command, tx: mpsc::Sender<(Command, String)>) -> Result<S
     return Ok(user_input);
 }
 
+
 pub fn run(args: Vec<String>) -> Result<String, Box<dyn Error>> {
-    let command = parse_args(args)?;
-
     let (tx, rx): (mpsc::Sender<(Command, String)>, mpsc::Receiver<(Command, String)>) = mpsc::channel();
-
-    let input = thread::spawn(move || {
-        if let Err(error) = read_input(command, tx) {
-            eprintln!("Error reading input: {}", error);
-        }
-    });
-
+ 
     let output = thread::spawn(move || {
         for request in rx {
             match transform(request) {
@@ -119,8 +149,37 @@ pub fn run(args: Vec<String>) -> Result<String, Box<dyn Error>> {
         }
     });
 
-    let _ = input.join();
-    let _ = output.join();
+    match args.len() {
+        2 | 3  => { // NON-INTERACTIVE MODE
+            let command: Command = parse_args(args.clone())?;
+            let user_input: String = { 
+                match args.len() {
+                    3 => args[2..].join(" "),
+                    _ => String::new()
+                }
+            };
+
+            let input = thread::spawn(move || {
+                if let Err(error) = read_cli(command, user_input, tx) {
+                    eprintln!("Error reading input: {}", error);
+                }
+            });
+
+            let _ = input.join();
+            let _ = output.join();
+        } 
+        _ => {
+            // TOO MANY OR NO ARGS - INTERACTIVE MODE
+            let input = thread::spawn(move || {
+                if let Err(error) = read_channel_input(tx) {
+                    eprintln!("Error reading input: {}", error);
+                }
+            });
+
+            let _ = input.join();
+            let _ = output.join();
+        } 
+    }
 
     return Ok("Success".to_string())
 }
@@ -135,6 +194,7 @@ fn transform(output: (Command, String)) -> Result<String, Box<dyn Error>> {
         Command::NoSpaces => remove_spaces(user_string),
         Command::Slugify => to_slugify(user_string),
         Command::Csv => print_csv(user_string),
+        Command::Exit => exit(),
     };
     
     return Ok(result?)
@@ -186,40 +246,15 @@ fn print_csv(user_string: String) -> Result<String, Box<dyn Error>> {
         return Err("Input was an empty string.".into());
     }
 
-    let mut csv_buffer = Cursor::new(&user_string);
-    let mut reader = ReaderBuilder::new()
-        .has_headers(false)
-        .from_reader(&mut csv_buffer);
+    let table = Table::from_csv_string(&user_string)?;
 
-    let mut string_buffer = Vec::new();
-    {
-        let mut writer = WriterBuilder::new()
-            .has_headers(false)
-            .delimiter(b'\t')
-            .from_writer(&mut string_buffer);
-        for result in reader.records() {
-            match result {
-                Ok(record) => writer.write_record(&record)?,
-                Err(error) => {
-                    eprintln!("Error reading CSV from <stdin>: {}", error);
-                    std::process::exit(1);
-                }
-            }
-        }
-
-        writer.flush()?;
-    }
-
-    let output = format!("{}", String::from_utf8(string_buffer).unwrap());
-
-    Ok(output)
+    Ok(table.slice(..).to_string())
 }
 
 fn output_transformation(string_mutation: String) {
     // Output transformation
-     let output: String = format!("--------------------------- \n\
-               Transformed text: \n {} \
-               ---------------------------",
+     let output: String = format!("\n\
+               Transformed text: \n {} \n ",
                string_mutation
      );
 

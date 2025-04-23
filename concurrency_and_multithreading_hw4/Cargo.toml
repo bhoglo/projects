@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 slug = "0.1.4"
 csv = "1.1"
+prettytable-rs = "^0.10"
